@@ -8,7 +8,8 @@ trap 'report_failure "$LINENO"' ERR
 step 'Preflight checks'
 operator_only
 require_commands nginx ss curl awk grep mktemp mkdir rm
-[[ -f "$PROJECT_DIR/nginx.conf" && -f "$PROJECT_DIR/pegaai-tunnel.service" ]] || fail 'Source configuration or service unit is missing.'
+[[ -f "$PROJECT_DIR/nginx.conf" ]] || fail "Source configuration is missing: $PROJECT_DIR/nginx.conf"
+[[ -f "$PROJECT_DIR/proxy-tunnel.service" ]] || fail "Source service unit is missing: $PROJECT_DIR/proxy-tunnel.service"
 sudo test -x /usr/sbin/nginx || fail 'Ubuntu NGINX is not installed at /usr/sbin/nginx.'
 sudo test -r /etc/ssl/certs/ca-certificates.crt || fail 'The system CA trust bundle is missing.'
 if sudo test -e "$CONFIG_DIR" || sudo test -L "$CONFIG_DIR" || sudo test -e "$UNIT" || sudo test -L "$UNIT"; then
@@ -38,7 +39,7 @@ step 'Install configuration and service'
 INSTALL_STARTED=1
 sudo install -d -o root -g root -m 755 "$CONFIG_DIR"
 sudo install -o root -g root -m 644 "$PROJECT_DIR/nginx.conf" "$CONFIG"
-sudo install -o root -g root -m 644 "$PROJECT_DIR/pegaai-tunnel.service" "$UNIT"
+sudo install -o root -g root -m 644 "$PROJECT_DIR/proxy-tunnel.service" "$UNIT"
 ok 'Configuration and systemd unit installed.'
 detail Config "$CONFIG"
 detail Unit "$UNIT"
