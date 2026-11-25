@@ -11,7 +11,7 @@ All paths below `/v1/` are forwarded, including query strings. Streaming respons
 
 ## Security
 
-The default listener is `127.0.0.1:8080` over HTTP. It is for local testing only and is not reachable by other machines. Do not expose it directly on a network: API keys and prompts would travel in plaintext.
+The default listener is `127.0.0.1:4714` over HTTP. It is for local testing only and is not reachable by other machines. Do not expose it directly on a network: API keys and prompts would travel in plaintext.
 
 For remote clients, configure HTTPS and restrict access to approved networks as described below, or place the loopback listener behind an existing approved HTTPS reverse proxy. Restrict its direct access so users cannot bypass TLS. The proxy host and its administrators can see API keys and prompts. NGINX access logging is disabled, but error logs or other infrastructure can still contain request details; review log handling and retention. Never log authorization headers or request bodies. This proxy relies on AICC to authenticate each request; it does not authenticate clients independently or enforce per-user quotas. Follow company policy before exposing the service.
 
@@ -29,7 +29,7 @@ bash deploy/install.sh
 bash deploy/status.sh
 ```
 
-The installer validates the source configuration, checks that port 8080 is free, and starts a separate NGINX instance. It refuses to overwrite an existing installation or configuration. It does not install packages, change the existing NGINX configuration, enable remote access, or send an API key to AICC. The final check only verifies that a local request to an unconfigured path returns 404. If installation fails after files have been copied, no automatic rollback occurs; inspect the files and logs before retrying. Check errors with:
+The installer validates the source configuration, checks that port 4714 is free, and starts a separate NGINX instance. It refuses to overwrite an existing installation or configuration. It does not install packages, change the existing NGINX configuration, enable remote access, or send an API key to AICC. The final check only verifies that a local request to an unconfigured path returns 404. If installation fails after files have been copied, no automatic rollback occurs; inspect the files and logs before retrying. Check errors with:
 
 ```bash
 sudo journalctl -u pegaai-tunnel.service -n 50 --no-pager
@@ -44,7 +44,7 @@ read -rsp 'AICC API key: ' AICC_API_KEY
 echo
 curl --fail-with-body \
   -H "Authorization: Bearer ${AICC_API_KEY}" \
-  http://127.0.0.1:8080/v1/models
+  http://127.0.0.1:4714/v1/models
 ```
 
 Try a chat request with a model your key is allowed to use:
@@ -54,7 +54,7 @@ curl --fail-with-body \
   -H "Authorization: Bearer ${AICC_API_KEY}" \
   -H 'Content-Type: application/json' \
   -d '{"model":"Pega-Chat","messages":[{"role":"user","content":"Hello"}]}' \
-  http://127.0.0.1:8080/v1/chat/completions
+  http://127.0.0.1:4714/v1/chat/completions
 unset AICC_API_KEY
 ```
 
@@ -62,9 +62,9 @@ The key is still visible to privileged processes and may briefly appear in the `
 
 ## Enable HTTPS for remote clients
 
-Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests to `http://127.0.0.1:8080` without changing the path, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
+Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests to `http://127.0.0.1:4714` without changing the path, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
 
-Alternatively, edit the `server` block in `/etc/pegaai-tunnel/nginx.conf`: replace the `listen 127.0.0.1:8080;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
+Alternatively, edit the `server` block in `/etc/pegaai-tunnel/nginx.conf`: replace the `listen 127.0.0.1:4714;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
 
 ```nginx
 listen 443 ssl;

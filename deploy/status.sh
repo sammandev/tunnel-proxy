@@ -28,11 +28,11 @@ ok 'NGINX configuration test passed.'
 
 step 'Check listener'
 listen_lines="$(sudo awk '/^[[:space:]]*listen[[:space:]]/ { print }' "$CONFIG")"
-if [[ "$listen_lines" =~ ^[[:space:]]*listen[[:space:]]+127\.0\.0\.1:8080\;[[:space:]]*$ ]] && ! sudo grep -Eq '^[[:space:]]*include[[:space:]]' "$CONFIG"; then
-    listeners="$(ss -H -ltn '( sport = :8080 )')"
-    [[ -n "$listeners" ]] || fail 'No listener found on port 8080.'
+if [[ "$listen_lines" =~ ^[[:space:]]*listen[[:space:]]+127\.0\.0\.1:4714\;[[:space:]]*$ ]] && ! sudo grep -Eq '^[[:space:]]*include[[:space:]]' "$CONFIG"; then
+    listeners="$(ss -H -ltn '( sport = :4714 )')"
+    [[ -n "$listeners" ]] || fail 'No listener found on port 4714.'
     printf '%s\n' "$listeners" | awk '{ printf "       %s\n", $0 }'
-    response="$(curl --noproxy '*' --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/not-allowed)"
+    response="$(curl --noproxy '*' --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4714/not-allowed)"
     [[ "$response" == 404 ]] || fail "Local rejection check returned HTTP $response, expected 404."
     ok 'Local listener responds and rejects an unconfigured path (HTTP 404).'
 else
