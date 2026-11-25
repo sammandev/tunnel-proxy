@@ -6,8 +6,9 @@ An NGINX reverse proxy for AICC's OpenAI-compatible LLM endpoint. Each client su
 | --- | --- |
 | `/v1/chat/completions` | `/pegaai/v1/chat/completions` |
 | `/v1/models` | `/pegaai/v1/models` |
+| `/maas/api/v1/model-status/public/models` | `/maas/api/v1/model-status/public/models` |
 
-All paths below `/v1/` are forwarded, including query strings. Streaming responses are not buffered. Other paths return 404. The supplied model JSON files are snapshots, not live model lists; this proxy does not serve them. TTS, image, embedding and other separate endpoints are not included.
+All paths below `/v1/` and the exact model-status path are forwarded, including query strings. Streaming responses are not buffered. Other paths return 404. The model-status endpoint returns AICC's public listing, which may include non-LLM models and does not guarantee access to each model. The supplied model JSON files are snapshots, not live model lists; this proxy does not serve them. TTS, image, embedding and other separate endpoints are not included.
 
 ## Security
 
@@ -55,14 +56,24 @@ curl --fail-with-body \
   -H 'Content-Type: application/json' \
   -d '{"model":"Pega-Chat","messages":[{"role":"user","content":"Hello"}]}' \
   http://127.0.0.1:4714/v1/chat/completions
+```
+
+To query the AICC public model status through the tunnel:
+
+```bash
+curl --noproxy '*' --fail-with-body \
+  -H "Authorization: Bearer ${AICC_API_KEY}" \
+  http://127.0.0.1:4714/maas/api/v1/model-status/public/models
 unset AICC_API_KEY
 ```
 
 The key is still visible to privileged processes and may briefly appear in the `curl` process arguments. Run these tests only on a trusted host. A `401` or `403` can be returned by AICC for an invalid key or insufficient model access. The status snapshots do not guarantee that an alias is accepted or currently available.
 
+For an existing installation, review and add the model-status `location` block from the source configuration to `/etc/tunnel-proxy/nginx.conf`; do not overwrite existing TLS or listener changes. Validate it with `sudo nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -t`, then reload with `sudo systemctl reload tunnel-proxy.service`. The first-install script deliberately refuses existing installations.
+
 ## Enable HTTPS for remote clients
 
-Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests to `http://127.0.0.1:4714` without changing the path, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
+Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests and the exact `/maas/api/v1/model-status/public/models` path to `http://127.0.0.1:4714` without changing the paths, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
 
 Alternatively, edit the `server` block in `/etc/tunnel-proxy/nginx.conf`: replace the `listen 127.0.0.1:4714;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
 
