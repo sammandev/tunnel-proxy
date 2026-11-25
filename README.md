@@ -36,6 +36,40 @@ The installer validates the source configuration, checks that port 4714 is free,
 sudo journalctl -u tunnel-proxy.service -n 50 --no-pager
 ```
 
+## Update an existing installation
+
+Transfer the updated source using your company's approved process, then run as an ordinary operator:
+
+```bash
+cd /opt/tunnel-proxy
+bash deploy/update.sh
+bash deploy/status.sh
+```
+
+The update script shows the differences between the installed files and source files. Review them carefully: applying them replaces the changed installed files, including any server-specific TLS, listener, access-control or unit settings. Merge settings you want to keep into the source files before applying. Type `APPLY` to continue; any other response cancels without changing the installation.
+
+The script validates the source NGINX configuration, backs up both installed files under `/var/backups/tunnel-proxy/`, then installs only the changed files. For configuration-only changes, it requests an NGINX reload. If the service unit changes, it runs `systemctl daemon-reload` and restarts the service, which may interrupt active requests. It does not change systemd drop-ins. A successful reload request does not prove that the new configuration was applied or that AICC is reachable; inspect the journal and test the changed behavior.
+
+If an update fails after backup, it does not roll back automatically. Inspect the printed backup directory and the journal. To restore both files when the backup is complete, replace the example path below with the printed backup path:
+
+```bash
+BACKUP=/var/backups/tunnel-proxy/REPLACE-WITH-BACKUP-DIRECTORY
+sudo ls -l "$BACKUP"
+sudo cp -a "$BACKUP/nginx.conf" /etc/tunnel-proxy/nginx.conf
+sudo cp -a "$BACKUP/tunnel-proxy.service" /etc/systemd/system/tunnel-proxy.service
+sudo systemctl daemon-reload
+sudo nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -t
+```
+
+Only if the configuration test succeeds, restart and check the service:
+
+```bash
+sudo systemctl restart tunnel-proxy.service
+bash deploy/status.sh
+```
+
+If the service is stopped, `/run/tunnel-proxy/` may be absent; inspect the journal and restore the service with operator assistance rather than assuming this test succeeded.
+
 ## Test locally on Ubuntu
 
 Enter your own AICC API key at the prompt. Do not paste it into commands, chat, source files, or logs.
@@ -69,7 +103,7 @@ unset AICC_API_KEY
 
 The key is still visible to privileged processes and may briefly appear in the `curl` process arguments. Run these tests only on a trusted host. A `401` or `403` can be returned by AICC for an invalid key or insufficient model access. The status snapshots do not guarantee that an alias is accepted or currently available.
 
-For an existing installation, review and add the model-status `location` block from the source configuration to `/etc/tunnel-proxy/nginx.conf`; do not overwrite existing TLS or listener changes. Validate it with `sudo nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -t`, then reload with `sudo systemctl reload tunnel-proxy.service`. The first-install script deliberately refuses existing installations.
+For an existing installation, apply the model-status `location` block with the update procedure above, preserving any server-specific settings. The first-install script deliberately refuses existing installations.
 
 ## Enable HTTPS for remote clients
 
