@@ -5,10 +5,10 @@ export SYSTEMD_COLORS=0
 
 DEPLOY_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd -- "$DEPLOY_DIR/.." && pwd)"
-SERVICE=pegaai-tunnel.service
-CONFIG_DIR=/etc/pegaai-tunnel
+SERVICE=tunnel-proxy.service
+CONFIG_DIR=/etc/tunnel-proxy
 CONFIG="$CONFIG_DIR/nginx.conf"
-UNIT=/etc/systemd/system/pegaai-tunnel.service
+UNIT=/etc/systemd/system/tunnel-proxy.service
 UI_STEP=0
 UI_STEPS=0
 UI_TITLE=''

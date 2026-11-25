@@ -23,7 +23,7 @@ sudo systemctl is-active --quiet "$SERVICE" || fail "Service $SERVICE is not act
 ok "Service $SERVICE is active."
 
 step 'Validate NGINX configuration'
-sudo /usr/sbin/nginx -p /run/pegaai-tunnel/ -c "$CONFIG" -t
+sudo /usr/sbin/nginx -p /run/tunnel-proxy/ -c "$CONFIG" -t
 ok 'NGINX configuration test passed.'
 
 step 'Check listener'
@@ -41,5 +41,5 @@ else
 fi
 
 result SUCCESS 'Installation and service checks passed.'
-detail Logs 'sudo journalctl -u pegaai-tunnel.service -n 50 --no-pager'
+detail Logs 'sudo journalctl -u tunnel-proxy.service -n 50 --no-pager'
 info 'Upstream TLS, credentials, inference, and remote access were not tested.'

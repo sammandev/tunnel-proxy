@@ -1,0 +1,16 @@
+[Unit]
+Description=AICC OpenAI-compatible reverse proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+RuntimeDirectory=tunnel-proxy
+ExecStartPre=/usr/sbin/nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -t
+ExecStart=/usr/sbin/nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -g "daemon off;"
+ExecReload=/usr/sbin/nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -s reload
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

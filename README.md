@@ -19,12 +19,12 @@ The Ubuntu server needs DNS and outbound HTTPS access to `aicc-gateway.pegatronc
 
 ## Install on Ubuntu
 
-Perform these commands directly on the approved Ubuntu host. Transfer this folder using your company's approved process. The example assumes it is available as `/opt/pegaai-tunnel`. Run scripts as an ordinary operator with sudo access, not as root.
+Perform these commands directly on the approved Ubuntu host. Transfer this folder using your company's approved process. The example assumes it is available as `/opt/tunnel-proxy`. Run scripts as an ordinary operator with sudo access, not as root.
 
 ```bash
 sudo apt update
 sudo apt install nginx ca-certificates
-cd /opt/pegaai-tunnel
+cd /opt/tunnel-proxy
 bash deploy/install.sh
 bash deploy/status.sh
 ```
@@ -32,7 +32,7 @@ bash deploy/status.sh
 The installer validates the source configuration, checks that port 4714 is free, and starts a separate NGINX instance. It refuses to overwrite an existing installation or configuration. It does not install packages, change the existing NGINX configuration, enable remote access, or send an API key to AICC. The final check only verifies that a local request to an unconfigured path returns 404. If installation fails after files have been copied, no automatic rollback occurs; inspect the files and logs before retrying. Check errors with:
 
 ```bash
-sudo journalctl -u pegaai-tunnel.service -n 50 --no-pager
+sudo journalctl -u tunnel-proxy.service -n 50 --no-pager
 ```
 
 ## Test locally on Ubuntu
@@ -64,7 +64,7 @@ The key is still visible to privileged processes and may briefly appear in the `
 
 Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests to `http://127.0.0.1:4714` without changing the path, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
 
-Alternatively, edit the `server` block in `/etc/pegaai-tunnel/nginx.conf`: replace the `listen 127.0.0.1:4714;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
+Alternatively, edit the `server` block in `/etc/tunnel-proxy/nginx.conf`: replace the `listen 127.0.0.1:4714;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
 
 ```nginx
 listen 443 ssl;
@@ -78,9 +78,9 @@ deny all;
 Restrict private-key permissions, allow only approved clients through the firewall, and ensure port 443 is not already in use. If it is, integrate with the existing HTTPS proxy instead of stopping it. Test and restart:
 
 ```bash
-sudo nginx -p /run/pegaai-tunnel/ -c /etc/pegaai-tunnel/nginx.conf -t
-sudo systemctl restart pegaai-tunnel.service
-sudo systemctl status pegaai-tunnel.service --no-pager
+sudo nginx -p /run/tunnel-proxy/ -c /etc/tunnel-proxy/nginx.conf -t
+sudo systemctl restart tunnel-proxy.service
+sudo systemctl status tunnel-proxy.service --no-pager
 ```
 
 Clients can then use `https://your-approved-hostname.example/v1` as their base URL and their own AICC key as the API key. Verify both streaming and non-streaming requests, and test that disallowed networks cannot connect. A valid certificate must match the hostname. Do not disable TLS verification in clients.
