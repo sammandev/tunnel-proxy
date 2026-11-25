@@ -1,0 +1,16 @@
+[Unit]
+Description=AICC OpenAI-compatible reverse proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+RuntimeDirectory=pegaai-tunnel
+ExecStartPre=/usr/sbin/nginx -p /run/pegaai-tunnel/ -c /etc/pegaai-tunnel/nginx.conf -t
+ExecStart=/usr/sbin/nginx -p /run/pegaai-tunnel/ -c /etc/pegaai-tunnel/nginx.conf -g "daemon off;"
+ExecReload=/usr/sbin/nginx -p /run/pegaai-tunnel/ -c /etc/pegaai-tunnel/nginx.conf -s reload
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
