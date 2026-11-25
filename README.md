@@ -12,9 +12,9 @@ All paths below `/v1/` and the exact model-status path are forwarded, including 
 
 ## Security
 
-The default listener is `127.0.0.1:4714` over HTTP. It is for local testing only and is not reachable by other machines. Do not expose it directly on a network: API keys and prompts would travel in plaintext.
+The proxy listens on `127.0.0.1:4714` and `10.176.2.139:4714` over HTTP. **API keys, prompts, and responses travel unencrypted across the network.** Use the LAN listener only where company policy explicitly permits it; use HTTPS for confidentiality.
 
-For remote clients, configure HTTPS and restrict access to approved networks as described below, or place the loopback listener behind an existing approved HTTPS reverse proxy. Restrict its direct access so users cannot bypass TLS. The proxy host and its administrators can see API keys and prompts. NGINX access logging is disabled, but error logs or other infrastructure can still contain request details; review log handling and retention. Never log authorization headers or request bodies. This proxy relies on AICC to authenticate each request; it does not authenticate clients independently or enforce per-user quotas. Follow company policy before exposing the service.
+Like the MCP reference, the proxy checks `Host` and `Origin`, but has no client IP allowlist. Those headers are not authentication and can be forged. Restrict access using approved firewall rules and configure HTTPS as described below. The proxy host and its administrators can see API keys and prompts. NGINX access logging is disabled, but error logs or other infrastructure can still contain request details; review log handling and retention. Never log authorization headers or request bodies. This proxy relies on AICC to authenticate each request; it does not authenticate clients independently or enforce per-user quotas.
 
 The Ubuntu server needs DNS and outbound HTTPS access to `aicc-gateway.pegatroncorp.com`, and its CA trust store must trust the upstream certificate. Upstream certificate verification and SNI are enabled. If your organization intercepts TLS, install its approved CA into the system trust store; do not disable verification.
 
@@ -30,7 +30,7 @@ bash deploy/install.sh
 bash deploy/status.sh
 ```
 
-The installer validates the source configuration, checks that port 4714 is free, and starts a separate NGINX instance. It refuses to overwrite an existing installation or configuration. It does not install packages, change the existing NGINX configuration, enable remote access, or send an API key to AICC. The final check only verifies that a local request to an unconfigured path returns 404. If installation fails after files have been copied, no automatic rollback occurs; inspect the files and logs before retrying. Check errors with:
+The installer validates the source configuration, checks that port 4714 is free, and starts a separate NGINX instance. It enables the HTTP LAN listener but does not install packages, change the existing NGINX configuration, configure firewall rules, or send an API key to AICC. It refuses to overwrite an existing installation or configuration. The final check only verifies that a local request to an unconfigured path returns 404. If installation fails after files have been copied, no automatic rollback occurs; inspect the files and logs before retrying. Check errors with:
 
 ```bash
 sudo journalctl -u tunnel-proxy.service -n 50 --no-pager
@@ -105,11 +105,21 @@ The key is still visible to privileged processes and may briefly appear in the `
 
 For an existing installation, apply the model-status `location` block with the update procedure above, preserving any server-specific settings. The first-install script deliberately refuses existing installations.
 
+## Test network access
+
+After deploying the configuration, check the listener from the Windows device without sending an API key:
+
+```powershell
+curl.exe --noproxy 10.176.2.139 -i http://10.176.2.139:4714/not-allowed
+```
+
+An HTTP 404 means the tunnel rejected the unconfigured path; connection errors indicate routing, firewall or listener problems. A 403 can indicate a rejected `Host` or `Origin`. The LAN base URL is `http://10.176.2.139:4714/v1`, but do not send keys over it unless plaintext traffic is permitted. If this device's address or routing changes, follow your network policy; the proxy itself has no IP allowlist.
+
 ## Enable HTTPS for remote clients
 
-Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. If an existing HTTPS proxy is already in use, route its `/v1/` requests and the exact `/maas/api/v1/model-status/public/models` path to `http://127.0.0.1:4714` without changing the paths, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy.
+Obtain an approved hostname, certificate and private key, and confirm the permitted client IP ranges and firewall rules. Remove the plaintext LAN listener so clients cannot bypass HTTPS. If an existing HTTPS proxy is already in use, route its `/v1/` requests and the exact `/maas/api/v1/model-status/public/models` path to `http://127.0.0.1:4714` without changing the paths, and disable response buffering for streaming. Preserve the client `Authorization` header and restrict access at that proxy. Update the `Host` and `Origin` maps to match the trusted HTTPS endpoint and the headers sent by the proxy.
 
-Alternatively, edit the `server` block in `/etc/tunnel-proxy/nginx.conf`: replace the `listen 127.0.0.1:4714;` line with the following, substituting your actual paths and approved CIDR. Keep the existing locations unchanged.
+Alternatively, edit the `server` block in `/etc/tunnel-proxy/nginx.conf`: replace the LAN `listen` directive with the following, substituting your actual paths and approved CIDR. Keep the loopback listener if local access is needed and update the `Host` and `Origin` maps for the HTTPS hostname and port.
 
 ```nginx
 listen 443 ssl;

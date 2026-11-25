@@ -20,13 +20,15 @@ load_state="$(sudo systemctl show "$SERVICE" --property=LoadState --value --no-p
 listeners="$(ss -H -ltn '( sport = :4714 )')"
 [[ -z "$listeners" ]] || fail 'Port 4714 is already in use; no files were changed.'
 listen_lines="$(awk '/^[[:space:]]*listen[[:space:]]/ { print }' "$PROJECT_DIR/nginx.conf")"
-[[ "$listen_lines" =~ ^[[:space:]]*listen[[:space:]]+127\.0\.0\.1:4714\;[[:space:]]*$ ]] || fail 'Source configuration must have exactly one 127.0.0.1:4714 listener.'
+[[ "$listen_lines" =~ ^[[:space:]]*listen[[:space:]]+127\.0\.0\.1:4714\;[[:space:]]*listen[[:space:]]+10\.176\.2\.139:4714\;[[:space:]]*$ ]] || fail 'Source configuration must have the expected localhost and LAN listeners.'
 if grep -Eq '^[[:space:]]*include[[:space:]]' "$PROJECT_DIR/nginx.conf"; then
     fail 'Source configuration includes additional files; review them manually before deployment.'
 fi
-ok 'Required tools, installation paths, and loopback port are available.'
-detail Listener '127.0.0.1:4714 (local HTTP only)'
+ok 'Required tools, installation paths, and port are available.'
+detail Local '127.0.0.1:4714'
+detail LAN '10.176.2.139:4714 (HTTP; no client IP allowlist)'
 detail Upstream 'AICC HTTPS; user-provided Bearer key'
+warn 'LAN traffic, including API keys, is unencrypted. Use only if permitted by company policy.'
 
 step 'Validate source configuration'
 CHECK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tunnel-proxy-nginx-check.XXXXXXXX")"
@@ -56,8 +58,8 @@ response="$(curl --noproxy '*' --silent --show-error --max-time 5 --output /dev/
 ok 'Local listener responds and rejects an unconfigured path (HTTP 404).'
 info 'No API key or AICC inference request was used in this check.'
 
-result SUCCESS 'Installation is active on localhost only.'
+result SUCCESS 'Installation is active; verify LAN access from the approved device.'
 detail Status 'bash deploy/status.sh'
 detail Logs 'sudo journalctl -u tunnel-proxy.service -n 50 --no-pager'
-warn 'Remote clients require approved HTTPS and access controls; see README.md.'
+warn 'The LAN listener uses plaintext HTTP; see README.md for security details.'
 warn 'Verify upstream access with your own API key; the local check does not test AICC.'
