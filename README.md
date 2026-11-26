@@ -8,7 +8,7 @@ An NGINX reverse proxy for AICC's OpenAI-compatible LLM endpoint. Each client su
 | `/v1/models` | `/pegaai/v1/models` |
 | `/maas/api/v1/model-status/public/models` | `/maas/api/v1/model-status/public/models` |
 
-All paths below `/v1/` and the exact model-status path are forwarded, including query strings. Streaming responses are not buffered. Other paths return 404. The model-status endpoint returns AICC's public listing, which may include non-LLM models and does not guarantee access to each model. The supplied model JSON files are snapshots, not live model lists; this proxy does not serve them. TTS, image, embedding and other separate endpoints are not included.
+All paths below `/v1/` and the exact model-status path are forwarded, including query strings. Streaming responses are not buffered. Request bodies are streamed to AICC instead of being spooled to disk, so large chat requests (for example with many tool definitions) do not depend on NGINX's temporary-file directory. Other paths return 404. The model-status endpoint returns AICC's public listing, which may include non-LLM models and does not guarantee access to each model. The supplied model JSON files are snapshots, not live model lists; this proxy does not serve them. TTS, image, embedding and other separate endpoints are not included.
 
 ## Security
 
